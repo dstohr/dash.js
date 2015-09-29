@@ -701,7 +701,8 @@ Dash.dependencies.DashHandler = function () {
                     fd = frag.duration;
                     epsilon = (timeThreshold === undefined || timeThreshold === null) ? fd/2 : timeThreshold;
 
-                    if ((time + epsilon) >= ft && (time - epsilon) < (ft)) {
+                    if ((time + epsilon) >= ft &&
+                        (time - epsilon) < (ft + fd)) {
                         idx = frag.availabilityIdx;
                         break;
                     }
@@ -799,18 +800,16 @@ Dash.dependencies.DashHandler = function () {
 
             self.log("Getting the request for time: " + time);
 
-            getSegments.call(self, representation);
+            if (type === "video" && time === 0){
+                console.log("what the fuck is going on")
+            }
+
             index = getIndexForSegments.call(self, time, representation, timeThreshold);
-
-            //if (index < 0) {
-            //    index = getIndexForSegments.call(self, time, representation, timeThreshold);
-            //}
-
-            //self.log("Got segments.");
-            //self.log(segments);
-            //self.log("Got a list of segments, so dig deeper.");
-            //if (type === "video")
-            //    self.log("XXX time Index for time " + time + " is " + index);
+            //Index may be -1 if getSegments needs to update.  So after getSegments is called and updated then try to get index again.
+            getSegments.call(self, representation);
+            if (index < 0) {
+                index = getIndexForSegments.call(self, time, representation, timeThreshold);
+            }
 
             finished = !ignoreIsFinished ? isMediaFinished.call(self, representation) : false;
 
@@ -871,7 +870,7 @@ Dash.dependencies.DashHandler = function () {
 
             finished = isMediaFinished.call(self, representation);
 
-            //self.log("Stream finished? " + finished);
+            self.log("Stream finished? " + finished);
             if (finished) {
                 request = new MediaPlayer.vo.FragmentRequest();
                 request.action = request.ACTION_COMPLETE;
