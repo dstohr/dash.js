@@ -4,6 +4,7 @@ var app = angular.module('DashPlayer', ['DashSourcesService', 'DashContributorsS
 
 $(document).ready(function () {
     $('[data-toggle="tooltip"]').tooltip();
+    $('#drmLicenseForm').hide();
 });
 
 angular.module('DashSourcesService', ['ngResource']).factory('sources', function($resource){
@@ -30,7 +31,6 @@ app.controller('DashController', function($scope, sources, contributors) {
     contributors.query(function (data) {
         $scope.contributors = data.items;
     });
-
 
     $scope.chartOptions = {
         legend: {
@@ -102,13 +102,13 @@ app.controller('DashController', function($scope, sources, contributors) {
             droppedFPS:     {data: [], selected: false, color: '#004E64', label: 'Audio Dropped FPS'}
         },
         video:{
-            buffer:         {data: [], selected: true, color: '#004E64', label: 'Video Buffer Level'},
-            bitrate:        {data: [], selected: true, color: '#329d61', label: 'Video Bitrate (Mbps)'},
+            buffer:         {data: [], selected: true, color: '#00589d', label: 'Video Buffer Level'},
+            bitrate:        {data: [], selected: true, color: '#ff7900', label: 'Video Bitrate (Mbps)'},
             index:          {data: [], selected: false, color: '#326e88', label: 'Video Current Quality'},
             pendingIndex:   {data: [], selected: false, color: '#44c248', label: 'Video Pending Index'},
             ratio:          {data: [], selected: false, color: '#00CCBE', label: 'Video Ratio (Mbps)'},
             download:       {data: [], selected: false, color: '#FF6700', label: 'Video Download Rate (Mbps)'},
-            latency:        {data: [], selected: false, color: '#ffd446', label: 'Video Latency (ms)'},
+            latency:        {data: [], selected: false, color: '#329d61', label: 'Video Latency (ms)'},
             droppedFPS:     {data: [], selected: false, color: '#65080c', label: 'Video Dropped FPS'}
         }
     };
@@ -125,6 +125,9 @@ app.controller('DashController', function($scope, sources, contributors) {
     $scope.mediaSettingsCacheEnabled = true;
     $scope.metricsTimer = null;
     $scope.updateMetricsInterval = 1000;
+    $scope.drmKeySystems = ['com.widevine.alpha', 'com.microsoft.playready'];
+    $scope.drmKeySystem = "";
+    $scope.drmLicenseURL = "";
 
     //metrics
     $scope.videoBitrate = 0;
@@ -480,11 +483,14 @@ app.controller('DashController', function($scope, sources, contributors) {
 
         $scope.initSession();
 
-        var protData = null;
+        var protData = {};
         if ($scope.selectedItem.hasOwnProperty("protData")) {
             protData = $scope.selectedItem.protData;
+        } else if ($scope.drmLicenseURL !== "" && $scope.drmKeySystem !== "") {
+            protData[$scope.drmKeySystem] = {serverURL:$scope.drmLicenseURL};
+        } else {
+            protData = null;
         }
-
 
         $scope.controlbar.reset();
         $scope.player.setProtectionData(protData);
@@ -512,6 +518,11 @@ app.controller('DashController', function($scope, sources, contributors) {
 
     $scope.getOptionsButtonLabel = function () {
         return $scope.optionsGutter ? "Hide Options" : "Show Options";
+    };
+
+    $scope.setDrmKeySystem = function(item) {
+        $scope.drmKeySystem = item;
+        $('#drmLicenseForm').show();
     };
 
     // from: https://gist.github.com/siongui/4969449
@@ -660,7 +671,7 @@ app.controller('DashController', function($scope, sources, contributors) {
                 $scope[type + "Ratio"] = httpMetrics.ratio[type].low.toFixed(2) + " | " + httpMetrics.ratio[type].average.toFixed(2) + " | " + httpMetrics.ratio[type].high.toFixed(2);
             }
 
-            if ($scope.chartCount % 3 === 0) {
+            if ($scope.chartCount % 2 === 0) {
                 $scope.plotPoint('buffer', type, bufferLevel);
                 $scope.plotPoint('index', type, index);
                 $scope.plotPoint('bitrate', type, bitrate);
